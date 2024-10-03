@@ -68,8 +68,44 @@ function App() {
         }
     }, [readOnlyProposalContract, readOnlyProvider]);
 
+    const proposalWhenCreated = (proposalId, description, recipient, amount, votingDeadline, minVotesToPass) => {
+
+        setProposals((prevproposals) =>[
+            ...prevproposals,
+            {
+                proposalId,
+                description: description,
+                amount: amount,
+                minVoteRequired: minVotesToPass,
+                voteCount: 0,
+                deadline: votingDeadline,
+                executed: false
+            }
+        ])
+    }
+
+    const whenVoted = (proposalId, voter) => {
+
+        setProposals((prevproposals) => prevproposals.map((proposal) => {
+            if (Number(proposal.proposalId) === Number(proposalId)){
+                return {
+                    ...proposal,
+                    voteCount: proposal.voteCount + 1
+                };
+            }
+            return proposal;
+        }))
+    };
+
     useEffect(() => {
+        if(!readOnlyProposalContract) return;
+        readOnlyProposalContract.on("ProposalCreated", proposalWhenCreated);
+        readOnlyProposalContract.on("Voted", whenVoted);
         fetchProposals();
+        return () => {
+            readOnlyProposalContract.off("ProposalCreated", proposalWhenCreated);
+            readOnlyProposalContract.off("Voted", whenVoted);
+        };
     }, [fetchProposals]);
 
     return (
